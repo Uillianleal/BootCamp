@@ -3,7 +3,11 @@ package com.bootCamp.TarefaBootCamp.services;
 
 import java.util.Optional;
 
+import javax.persistence.EntityNotFoundException;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -12,7 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.bootCamp.TarefaBootCamp.dto.ClientDTO;
 import com.bootCamp.TarefaBootCamp.entites.Client;
 import com.bootCamp.TarefaBootCamp.repositores.ClientRepository;
+import com.bootCamp.TarefaBootCamp.services.exception.DatabaseException;
 import com.bootCamp.TarefaBootCamp.services.exception.RNotFoundException;
+
 
 
 @Service
@@ -35,4 +41,53 @@ public class ClientService {
 		Client entity = obj.orElseThrow(() -> new RNotFoundException("Entity not found"));
 		return new ClientDTO(entity);
 	}
+	
+	@Transactional(readOnly = true)
+	public ClientDTO insert(ClientDTO dto) {
+		Client entity = new Client();
+		copyClient(dto, entity);
+		return new ClientDTO(entity);
+	}
+
+	@Transactional(readOnly = true)
+	public ClientDTO update(Long id, ClientDTO dto) {
+		try	{
+			Client entity = repository.getOne(id);
+			copyClient(dto, entity);
+			entity = repository.save(entity);
+			return new ClientDTO(entity);
+		}
+		catch(EntityNotFoundException e) {
+			throw new RNotFoundException("Id not found " + id);
+		}
+	}
+
+
+	public void delete(Long id) {
+		try {
+			repository.deleteById(id);
+		}
+		catch (EmptyResultDataAccessException e) {
+			throw new RNotFoundException("Id not found " + id);
+		}
+		
+		catch (DataIntegrityViolationException e) {
+			throw new DatabaseException("Integrity violation");
+		}
+		
+	}
+	
+	private void copyClient(ClientDTO dto, Client entity) {
+		entity.setName(dto.getName());
+		entity.setCpf(dto.getCpf());
+		entity.setIncome(dto.getIncome());
+		entity.setChildren(dto.getChildren());
+		entity.setBirthDate(dto.getBirthDate());
+		entity = repository.save(entity);
+		
+	}
+
+
+	
+	
 }
